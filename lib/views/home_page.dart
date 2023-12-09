@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:leitordeebook/classes/Book.dart';
+import 'package:leitordeebook/classes/book.dart';
 import 'package:leitordeebook/store/home_store.dart';
 
 class HomePage extends StatefulWidget {
-  HomePage({Key? key}) : super(key: key);
+  const HomePage({Key? key}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -14,13 +14,14 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    Widget body = _getBody(context);
+    return Scaffold(
+      body: ListenableBuilder(
+          listenable: store,
+          builder: (context, child) {
+            Widget body = _getBody(context);
 
-    return ListenableBuilder(
-      listenable: store,
-      builder: (context, child) => Scaffold(
-        body: body,
-      ),
+            return body;
+          }),
     );
   }
 
@@ -60,8 +61,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildItem(Book book, BuildContext context) {
+    bool isFavorite = store.isBookFavorite(book.id.toString());
+
     return InkWell(
-      onTap: () {},
+      onTap: openBook,
       child: Container(
         decoration: BoxDecoration(border: Border.all()),
         padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
@@ -85,8 +88,11 @@ class _HomePageState extends State<HomePage> {
                   top: 0,
                   right: 0,
                   child: GestureDetector(
-                    onTap: () {},
-                    child: Icon(Icons.bookmark_border),
+                    onTap: () => store.toggleFavorite(book.id.toString()),
+                    child: Icon(
+                      isFavorite ? Icons.bookmark : Icons.bookmark_border,
+                      color: isFavorite ? Colors.red : null,
+                    ),
                   ),
                 ),
                 Positioned(
@@ -145,4 +151,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       );
+
+  void openBook() {}
 }

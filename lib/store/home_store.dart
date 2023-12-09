@@ -1,76 +1,56 @@
 import 'package:flutter/material.dart';
-import 'package:leitordeebook/classes/Book.dart';
+import 'package:leitordeebook/classes/book.dart';
 import 'package:leitordeebook/controllers/home_controller.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:leitordeebook/services/app_storage_service.dart';
 
 class HomeStore extends ChangeNotifier {
   final controller = HomeController();
+  final storage = AppStorageService();
 
   List<Book> books = [];
-  List<Book> _favoriteBooks = [];
+  List<String> favoriteBooks = [];
   bool isLoading = false;
   String error = '';
 
   HomeStore() {
     loadBooks();
-    notifyListeners();
+    loadFavorites();
   }
 
   void loadBooks() async {
     try {
       isLoading = true;
       books = await controller.fetchBooks();
-
-      print('Home Store: $books');
-
-      notifyListeners();
     } catch (e) {
       error = e.toString().replaceAll('Exception: ', '');
-      notifyListeners();
     } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
-  bool isBookFavorite(Book book) {
-    return _favoriteBooks.contains(book);
+  bool isBookFavorite(String bookId) {
+    return favoriteBooks.contains(bookId);
   }
 
-  // Método para adicionar ou remover um livro da lista de favoritos
-  void toggleFavorite(Book book) {
-    if (isBookFavorite(book)) {
-      _favoriteBooks.remove(book);
+  void toggleFavorite(String bookId) {
+    if (isBookFavorite(bookId)) {
+      favoriteBooks.remove(bookId);
     } else {
-      _favoriteBooks.add(book);
+      favoriteBooks.add(bookId);
     }
 
-    // Salva a lista de favoritos no SharedPreferences
+    debugPrint('toggleFavorite: ${favoriteBooks}');
+
     saveFavorites();
     notifyListeners();
   }
 
-  // Método para salvar a lista de favoritos no SharedPreferences
-  Future<void> saveFavorites() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    List<String> favoriteIds =
-        _favoriteBooks.map((book) => book.id.toString()).toList();
-    prefs.setStringList('favorite_books', favoriteIds);
-  }
-
-  // Método para carregar a lista de favoritos do SharedPreferences
-  Future<void> loadFavorites() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    List<String>? favoriteIds = prefs.getStringList('favorite_books');
-
-    if (favoriteIds != null) {
-      _favoriteBooks = books
-          .where((book) => favoriteIds.contains(book.id.toString()))
-          .toList();
-    }
+  void loadFavorites() async {
+    favoriteBooks = await storage.loadFavorites(favoriteBooks) ?? [];
 
     notifyListeners();
   }
+
+  void saveFavorites() async => await storage.saveFavorites(favoriteBooks);
 }

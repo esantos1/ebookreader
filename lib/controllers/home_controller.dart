@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:leitordeebook/classes/Book.dart';
+import 'package:leitordeebook/classes/book.dart';
 import 'package:http/http.dart' as http;
 
 class HomeController {
