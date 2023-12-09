@@ -1,25 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:leitordeebook/classes/Book.dart';
 import 'package:leitordeebook/store/home_store.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   HomePage({Key? key}) : super(key: key);
 
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   final store = HomeStore();
 
   @override
   Widget build(BuildContext context) {
     Widget body = _getBody(context);
 
-    return Scaffold(
-      body: body,
+    return ListenableBuilder(
+      listenable: store,
+      builder: (context, child) => Scaffold(
+        body: body,
+      ),
     );
   }
 
   Widget _getBody(BuildContext context) {
     if (store.isLoading) {
       return Center(child: CircularProgressIndicator());
-    } else if (store.books.isNotEmpty) {
-      return _loadedBooksBody();
     } else if (store.books.isEmpty) {
       return Center(
         child: Text(
@@ -27,8 +34,10 @@ class HomePage extends StatelessWidget {
           style: Theme.of(context).textTheme.bodyLarge!,
         ),
       );
-    } else {
+    } else if (store.error.isNotEmpty) {
       return _errorBody(context);
+    } else {
+      return _loadedBooksBody();
     }
   }
 
@@ -39,39 +48,77 @@ class HomePage extends StatelessWidget {
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-        mainAxisExtent: 160,
+        mainAxisSpacing: 16,
+        mainAxisExtent: 180,
       ),
       itemBuilder: (context, index) {
         final item = store.books[index];
 
-        return InkWell(
-          onTap: () {},
-          child: Container(
-            padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-            width: 50,
-            color: Colors.blue,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return _buildItem(item, context);
+      },
+    );
+  }
+
+  Widget _buildItem(Book book, BuildContext context) {
+    return InkWell(
+      onTap: () {},
+      child: Container(
+        decoration: BoxDecoration(border: Border.all()),
+        padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+        width: 50,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Stack(
               children: [
                 Container(
                   width: 70,
                   height: 70,
-                  decoration: BoxDecoration(border: Border.all(width: 2)),
-                  constraints: BoxConstraints(maxHeight: 70),
+                  decoration: BoxDecoration(border: Border.all(width: 3)),
+                  clipBehavior: Clip.antiAliasWithSaveLayer,
                   child: FittedBox(
-                    fit: BoxFit.fitWidth,
-                    child: Image.network(
-                        'https://editoraflutuante.com.br/wp-content/uploads/2018/08/Quarta-Capa-Frente-1.jpg'),
+                    fit: BoxFit.fill,
+                    child: Image.network(book.coverUrl),
                   ),
                 ),
-                Text(item.title),
-                Text(item.author, style: TextStyle()),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: Icon(Icons.bookmark_border),
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: Icon(Icons.download_for_offline),
+                  ),
+                ),
               ],
             ),
-          ),
-        );
-      },
+            SizedBox(height: 16),
+            Text(
+              book.title,
+              style: Theme.of(context).textTheme.bodySmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: 4),
+            Text(
+              book.author,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(fontStyle: FontStyle.italic),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -79,7 +126,7 @@ class HomePage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Digite um número a ser calculado:',
+            store.error,
             style: Theme.of(context).textTheme.bodyLarge!,
           ),
           SizedBox(height: 16),
