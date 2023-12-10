@@ -1,4 +1,3 @@
-import 'package:leitordeebook/classes/book.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum _StorageKeys { favoriteBooks }

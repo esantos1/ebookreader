@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:leitordeebook/store/favorites_store.dart';
+import 'package:leitordeebook/store/home_store.dart';
 import 'package:leitordeebook/views/home_page.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => HomeStore()),
+        ChangeNotifierProvider(create: (context) => FavoritesStore()),
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
