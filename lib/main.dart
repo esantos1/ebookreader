@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:leitordeebook/store/favorites_store.dart';
 import 'package:leitordeebook/store/home_store.dart';
-import 'package:leitordeebook/views/home_page.dart';
+import 'package:leitordeebook/views/home_view.dart';
 import 'package:provider/provider.dart';
 
 void main() {

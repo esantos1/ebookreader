@@ -1,22 +1,17 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:leitordeebook/classes/book.dart';
 import 'package:leitordeebook/store/favorites_store.dart';
 import 'package:leitordeebook/store/home_store.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+// ignore: must_be_immutable
+class BooksView extends StatelessWidget {
+  BooksView({super.key});
 
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
   bool isDownloading = false;
   double progress = 0;
 
@@ -25,17 +20,13 @@ class _HomePageState extends State<HomePage> {
     final homeStore = Provider.of<HomeStore>(context);
     final favoritesStore = Provider.of<FavoritesStore>(context);
 
-    return SafeArea(
-      child: Scaffold(
-        body: ListenableBuilder(
-          listenable: homeStore,
-          builder: (context, child) {
-            Widget body = _getBody(context, homeStore, favoritesStore);
+    return ListenableBuilder(
+      listenable: homeStore,
+      builder: (context, child) {
+        Widget body = _getBody(context, homeStore, favoritesStore);
 
-            return body;
-          },
-        ),
-      ),
+        return body;
+      },
     );
   }
 
@@ -184,7 +175,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void showAlertDialog(Book book) => showDialog(
+  void showAlertDialog(BuildContext context, Book book) => showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) {
