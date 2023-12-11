@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:leitordeebook/store/download_store.dart';
 import 'package:leitordeebook/store/favorites_store.dart';
 import 'package:leitordeebook/store/home_store.dart';
 import 'package:leitordeebook/views/home_view.dart';
@@ -11,6 +12,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (context) => HomeStore()),
         ChangeNotifierProvider(create: (context) => FavoritesStore()),
+        ChangeNotifierProvider(create: (context) => DownloadStore()),
       ],
       child: MyApp(),
     ),

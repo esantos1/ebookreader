@@ -10,9 +10,7 @@ class FavoritesStore extends ChangeNotifier {
     loadFavorites();
   }
 
-  bool isBookFavorite(String bookId) {
-    return favoriteBooksIds.contains(bookId);
-  }
+  bool isBookFavorite(String bookId) => favoriteBooksIds.contains(bookId);
 
   void toggleFavorite(String bookId) {
     if (isBookFavorite(bookId)) {
@@ -27,7 +25,7 @@ class FavoritesStore extends ChangeNotifier {
   }
 
   void loadFavorites() async {
-    favoriteBooksIds = await storage.loadFavorites(favoriteBooksIds) ?? [];
+    favoriteBooksIds = await storage.loadFavorites() ?? [];
 
     notifyListeners();
   }

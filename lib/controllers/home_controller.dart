@@ -1,16 +1,15 @@
-import 'dart:convert';
-
 import 'package:leitordeebook/classes/book.dart';
-import 'package:http/http.dart' as http;
+import 'package:leitordeebook/helpers/dio_helper.dart';
 
 class HomeController {
   Future<List<Book>> fetchBooks() async {
     const url = 'https://escribo.com/books.json';
 
-    final response = await http.get(Uri.parse(url));
+    final dioHelper = DioHelper();
+    final response = await dioHelper.get(url);
 
     if (response.statusCode == 200) {
-      final body = json.decode(response.body);
+      final body = response.data;
 
       return body.map<Book>((item) => Book.fromJson(item)).toList();
     } else {

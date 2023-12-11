@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'package:leitordeebook/classes/book.dart';
+import 'package:leitordeebook/helpers/dio_helper.dart';
 import 'package:leitordeebook/store/favorites_store.dart';
 import 'package:leitordeebook/store/home_store.dart';
-import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:vocsy_epub_viewer/epub_viewer.dart';
 
-// ignore: must_be_immutable
-class BooksView extends StatelessWidget {
-  BooksView({super.key});
+class BooksView extends StatefulWidget {
+  const BooksView({super.key});
 
+  @override
+  State<BooksView> createState() => _BooksViewState();
+}
+
+class _BooksViewState extends State<BooksView> {
   bool isDownloading = false;
+
   double progress = 0;
 
   @override
@@ -72,11 +77,42 @@ class BooksView extends StatelessWidget {
     Book book,
   ) {
     bool isFavorite = favoritesStore.isBookFavorite(book.id.toString());
+    final favoriteIcon = Icon(
+      isFavorite ? Icons.bookmark : Icons.bookmark_border,
+      color: isFavorite ? Colors.red : null,
+    );
 
     return InkWell(
-      onTap: openBook,
+      onTap: () => openBook(context),
       onLongPress: () {
-        print('Longa pressão no livro ${book.title}');
+        showModalBottomSheet(
+          context: context,
+          builder: (context) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                onTap: () {
+                  favoritesStore.toggleFavorite(book.id.toString());
+                  Navigator.pop(context);
+                },
+                leading: favoriteIcon,
+                title: Text(
+                  isFavorite
+                      ? 'Remover aos favoritos'
+                      : 'Adicionar aos favoritos',
+                ),
+              ),
+              ListTile(
+                onTap: () {
+                  downloadBook(context, book);
+                  Navigator.pop(context);
+                },
+                leading: Icon(Icons.download),
+                title: Text('Baixar'),
+              ),
+            ],
+          ),
+        );
       },
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
@@ -84,42 +120,7 @@ class BooksView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Stack(
-              children: [
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(border: Border.all(width: 3)),
-                  clipBehavior: Clip.antiAliasWithSaveLayer,
-                  child: FittedBox(
-                    fit: BoxFit.fill,
-                    child: Image.network(book.coverUrl),
-                  ),
-                ),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: () =>
-                        favoritesStore.toggleFavorite(book.id.toString()),
-                    child: Icon(
-                      isFavorite ? Icons.bookmark : Icons.bookmark_border,
-                      color: isFavorite ? Colors.red : null,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: () => requestDownloadPermission(book),
-                    child: isDownloading
-                        ? CircularProgressIndicator(value: progress)
-                        : Icon(Icons.download_for_offline),
-                  ),
-                ),
-              ],
-            ),
+            _imageBox(book, favoriteIcon),
             SizedBox(height: 16),
             Text(
               book.title,
@@ -140,6 +141,35 @@ class BooksView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _imageBox(Book book, Icon favoriteIcon) {
+    return Stack(
+      children: [
+        Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(border: Border.all(width: 3)),
+          clipBehavior: Clip.antiAliasWithSaveLayer,
+          child: FittedBox(
+            fit: BoxFit.fill,
+            child: Image.network(book.coverUrl),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          right: 0,
+          child: favoriteIcon,
+        ),
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: isDownloading
+              ? CircularProgressIndicator(value: progress)
+              : Icon(Icons.download),
+        ),
+      ],
     );
   }
 
@@ -165,77 +195,72 @@ class BooksView extends StatelessWidget {
         ],
       );
 
-  Future<void> requestDownloadPermission(Book book) async {
+  Future<void> requestDownloadPermission(
+      BuildContext context, Book book) async {
     final permissionStatus = await Permission.storage.request();
 
     if (permissionStatus.isDenied) {
-      print('Permissão negada');
+      showAlertDialog(context, book);
     } else {
-      await downloadBook(book);
+      await downloadBook(context, book);
     }
   }
 
   void showAlertDialog(BuildContext context, Book book) => showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) {
-          return AlertDialog(
-            title: Text('Permissão negada!'),
-            content: Text('Habilite a permissão para armazenar o ebook.'),
-            actions: [
-              TextButton(
-                onPressed: Navigator.of(context).pop,
-                child: Text('Cancelar'),
-              ),
-              ElevatedButton(
-                onPressed: () => requestDownloadPermission(book),
-                child: Text('Configurações'),
-              ),
-            ],
-          );
-        },
+        builder: (context) => AlertDialog(
+          title: Text('Permissão negada!'),
+          content: Text('Habilite a permissão para armazenar o ebook.'),
+          actions: [
+            TextButton(
+              onPressed: Navigator.of(context).pop,
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => requestDownloadPermission(context, book),
+              child: Text('Configurações'),
+            ),
+          ],
+        ),
       );
 
-  Future<void> downloadBook(Book book) async {
-    const downloadsPath = '/storage/emulated/0/Download';
-    final filePath = path.join(
-      downloadsPath,
-      'ebooks',
-      '${book.title} - ${book.author}.epub',
-    );
+  Future<void> downloadBook(BuildContext context, Book book) async {
+    print('baixando...');
+
+    final downloadsPath = await path.getDownloadsDirectory();
+    final filePath =
+        '${downloadsPath!.path}/livros/${book.title} - ${book.author}.epub';
+
+    final dioHelper = DioHelper();
 
     try {
-      final response = await http.get(Uri.parse(book.downloadUrl));
-
-      if (response.statusCode == 200) {
-        final file = File(filePath);
-        await file.create(recursive: true);
-
-        var contentLength = response.contentLength ?? -1;
-        var receivedBytes = 0;
-        var fileSink = file.openWrite();
-
-        fileSink.add(response.bodyBytes);
-        receivedBytes += response.bodyBytes.length;
-
-        if (contentLength != -1) {
-          var progress = (receivedBytes / contentLength * 100).toInt();
-          print('Progresso: $progress%');
-        }
-
-        await fileSink.close();
-
-        print('Download concluído. Imagem salva em: $filePath');
-      } else {
-        print(
-            'Erro ao baixar a imagem. Código de status: ${response.statusCode}');
-      }
+      await dioHelper.download(book.downloadUrl, filePath);
+      print('Arquivo salvo em $filePath');
     } catch (e) {
-      print('Erro ao baixar e salvar a imagem: $e');
+      print('Erro ao baixar e salvar ebook: $e');
     }
   }
 
-  void openBook() {
+  void openBook(BuildContext context, {String? path}) async {
     print('abrindo...');
+
+    VocsyEpub.setConfig(
+      themeColor: Theme.of(context).primaryColor,
+      identifier: "open",
+      scrollDirection: EpubScrollDirection.HORIZONTAL,
+      allowSharing: true,
+      enableTts: true,
+      nightMode: true,
+    );
+
+    // get current locator
+    VocsyEpub.locatorStream.listen((locator) {
+      print('LOCATOR: $locator');
+    });
+
+    if (path != null) {
+      await VocsyEpub.openAsset(path);
+    }
   }
 }
